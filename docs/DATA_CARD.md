@@ -28,7 +28,7 @@
 
 ### Task 3: 关键部件服役寿命与删失记录 (`rul_component_failures`)
 - **样本规模**：120 个风电核心部件服役观测样本。
-- **涵盖部件**：主轴承（Main_Bearing, n=30）、齿轮箱轴承（Gearbox_Bearing, n=30）、发电机轴承（Generator_Bearing, n=30）、变桨电机（Pitch_Motor, n=30）。
+- **涵盖部件**：主轴承（`Main_Bearing`, n=30）、齿轮箱轴承（`Gearbox_Bearing`, n=30）、发电机轴承（`Generator_Bearing`, n=30）、变桨电机（`Pitch_Motor`, n=30）。
 - **事件分布**：44 次故障失效事件（$\delta=1$），76 次右删失记录（$\delta=0$），整体删失率达 63.3%。
 - **工况协变量**：累计运行小时数（`operating_hours`）、平均负载系数（`avg_load_factor`）与环境温度（`avg_ambient_temp`）。
 

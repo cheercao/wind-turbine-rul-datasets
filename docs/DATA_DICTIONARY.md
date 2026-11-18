@@ -1,6 +1,6 @@
 # 字段字典与特征规范 (Data Dictionary & Feature Schema)
 
-## 1. rul_blade_load_fatigue（Task 1: 高频载荷序列）
+## 1. `rul_blade_load_fatigue`（Task 1: 高频载荷序列）
 
 | 字段标识符 | 数据类型 | 物理含义 | 量纲 / 单位 | 取值范围 |
 |---|---|---|---|---|
@@ -13,7 +13,7 @@
 
 ---
 
-## 2. rul_bearing_degradation（Task 2: 轴承健康退化序列）
+## 2. `rul_bearing_degradation`（Task 2: 轴承健康退化序列）
 
 | 字段标识符 | 数据类型 | 物理含义 | 量纲 / 单位 | 取值范围 |
 |---|---|---|---|---|
@@ -25,7 +25,7 @@
 
 ---
 
-## 3. rul_component_failures（Task 3: 部件服役与生存分析记录）
+## 3. `rul_component_failures`（Task 3: 部件服役与生存分析记录）
 
 | 字段标识符 | 数据类型 | 物理含义 | 量纲 / 单位 | 取值范围 |
 |---|---|---|---|---|

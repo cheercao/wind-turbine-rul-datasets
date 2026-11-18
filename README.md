@@ -41,7 +41,7 @@
 ### Task 1: 载荷循环提取与累积疲劳损伤量化 (Rainflow Fatigue Analysis)
 
 - **物理背景**：风电机组叶片在旋转过程中承受显著的周期性气动载荷与随机湍流扰动，产生微观塑性变形与疲劳裂纹累积。
-- **输入表征**：多通道连续时序张量 $\mathbf{X} \in \mathbb{R}^{T \times C}$（采样频率 $f_s = 10\text{ Hz}$，包含三叶片摆振实测载荷 `blade_edge_1/2/3` 与发电机转速 `generator_rpm`，时序长度 $T=600$）。
+- **输入时序规格**：多通道连续时序张量定义为 $\mathbf{X} \in \mathbb{R}^{T \times C}$，采样频率 10 Hz，时序长度 $T = 600$（单次连续观测时长 60 s），涵盖 6 台机组（WT01–WT06）。测点包含三通道叶片摆振实测载荷（`blade_edge_1/2/3`）与发电机转速（`generator_rpm`）。
 
 #### 数学建模与计算流程
 
@@ -53,11 +53,21 @@ $$
 \mathcal{C} = \{ (S_{a,i}, S_{m,i}, n_i) \}_{i=1}^M
 $$
 
-其中 $S_{a,i}$ 为循环幅值，$S_{m,i}$ 为平均应力，$n_i$ 为该级循环频次。
+| 参数符号 | 物理含义 | 说明 |
+|---|---|---|
+| $S_{a,i}$ | 循环应力幅值 | 雨流计数提取的各级交变载荷幅值 |
+| $S_{m,i}$ | 平均应力 | 各级循环均值（用于平均应力修正） |
+| $n_i$ | 循环频次 | 当前时序历程中统计的载荷周次 |
 
 **2. Palmgren-Miner 线性累积疲劳损伤**
 
-结合材料 $S\text{-}N$ 双对数幂律本构方程 $N_i \cdot S_{a,i}^m = C$，依 Palmgren-Miner 准则计算无量纲累积疲劳损伤度 $D$：
+结合材料 S-N 双对数幂律本构方程：
+
+$$
+N_i \cdot S_{a,i}^m = C
+$$
+
+依 Palmgren-Miner 准则计算无量纲累积疲劳损伤度 $D$：
 
 $$
 D = \sum_{i=1}^M \frac{n_i}{N_i}
@@ -70,7 +80,15 @@ $$
 ### Task 2: 长程健康指数退化轨迹建模与阈值外推 (HI Degradation & First Hitting Time)
 
 - **物理背景**：主轴承与齿轮箱高速轴承在持续交变摩擦与温升冲击下发生微磨损、剥落或点蚀，状态监测表现为热平衡温度残差偏移与融合健康指数衰退。
-- **输入表征**：长历时多变量离散观测序列 $\mathcal{D}_k = \{(t_\tau, y_\tau, \mathbf{z}_\tau)\}_{\tau=0}^{k}$，其中 $t_\tau \in [0, 119]$ 为累计服役天数，$\mathbf{z}_\tau$ 为实测测点与热平衡机理模型之间的温度残差（`bearing_temp_residual_degC`），$y_\tau \in (0, 1.0]$ 为多维特征融合健康指数（`health_index_hi`）。
+- **输入序列定义**：长历时多变量离散观测时序集合定义为：
+
+$$
+\mathcal{D}_k = \{ (t_\tau, y_\tau, \mathbf{z}_\tau) \}_{\tau=0}^k
+$$
+
+包含 6 台机组（WT01–WT06）连续 120 天跟踪监测（运行天数 $t \in [0, 119]$）：
+- `bearing_temp_residual_degC`：测点温度与热平衡基准的残差标量 $\mathbf{z}$；
+- `health_index_hi`：多维融合健康状态指数 $y \in (0, 1.0]$。
 
 #### 数学建模与计算流程
 
@@ -82,7 +100,7 @@ $$
 y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)
 $$
 
-典范模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
+典型模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
 
 **2. 首达阈值时间（First Hitting Time, FHT）预测**
 
@@ -101,10 +119,19 @@ $$
 ### Task 3: 考虑右删失的多部件时变可靠度与生存分析 (Right-Censored Survival Analysis)
 
 - **物理背景**：在风电场实际工程统计中，绝大多数在役部件至统计截止时仍处于健康服役状态，直接丢弃未失效样本或将其强行视作故障将导致极大的生存概率高估或寿命低估偏差。
-- **输入表征**：$N=120$ 个关键部件样本集 $\mathcal{S} = \{(t_j, \delta_j, \mathbf{x}_j)\}_{j=1}^N$。涵盖 4 类关键部件（主轴承 Main Bearing、齿轮箱轴承 Gearbox Bearing、发电机轴承 Generator Bearing、变桨电机 Pitch Motor）。
-  - $t_j > 0$：观测服役时长（累计运行小时数）；
-  - $\delta_j \in \{0, 1\}$：事件发生指示符（$\delta_j = 1$ 为确切故障停机，$\delta_j = 0$ 为右删失截尾样本）；
-  - $\mathbf{x}_j$：环境与负荷协变量（平均负载系数 `avg_load_factor`、平均环境温度 `avg_ambient_temp`）。
+- **输入样本集定义**：共计 120 个关键部件服役观测样本，数学表征定义为：
+
+$$
+\mathcal{S} = \{ (t_j, \delta_j, \mathbf{x}_j) \}_{j=1}^N \quad (N = 120)
+$$
+
+涵盖 4 类核心部件（`Main_Bearing`、`Gearbox_Bearing`、`Generator_Bearing`、`Pitch_Motor`）。各分量定义如下：
+
+| 变量符号 | 对应数据字段 | 物理含义与取值范围 |
+|---|---|---|
+| $t_j$ | `operating_hours` | 观测服役时长（累计运行小时数，$t_j > 0$） |
+| $\delta_j$ | `failed_event` | 事件状态指示符：$\delta = 1$ 为确切故障停机，$\delta = 0$ 为右删失截尾 |
+| $\mathbf{x}_j$ | `avg_load_factor`, `avg_ambient_temp` | 工况协变量向量（包含平均负载系数与平均环境温度） |
 
 #### 数学建模与计算流程
 
@@ -134,7 +161,10 @@ $$
 \hat{S}(t) = \prod_{t_j \le t} \left( 1 - \frac{d_j}{n_j} \right)
 $$
 
-其中 $d_j$ 为时刻 $t_j$ 的失效数，$n_j$ 为时刻 $t_j$ 处处于风险暴露（At-Risk）的样本总数。
+| 统计分量 | 物理含义说明 |
+|---|---|
+| $d_j$ | 在时刻 $t_j$ 发生的确切故障失效事件数 |
+| $n_j$ | 在时刻 $t_j$ 处仍处于风险暴露（At-Risk）的有效在役样本总数 |
 
 ---
 
