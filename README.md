@@ -22,17 +22,17 @@
 
 大型风电机组（Wind Turbine Generators, WTGs）长期服役于非平稳湍流风况与交变载荷环境下，关键结构件与机电传动链退化机理复杂，剩余使用寿命（Remaining Useful Life, RUL）的高精度预测与可靠性评估是风电装备预测与健康管理（Prognostics and Health Management, PHM）领域的核心挑战。现有公开基准多局限于实验室稳态加速退化试验，难以兼顾空气动力-结构高频受载、长周期热力学退化以及多部件伴随高比例截尾（Right Censoring）的多时间尺度物理特性。
 
-**WindTurbine-RUL** 构建了一个面向风电机组健康监测与 RUL 评估的多任务学术基准数据集，涵盖三个互补的 PHM 核心研究范式：
+**WindTurbine-RUL** 构建了面向风电机组 PHM 与可靠性分析的多任务公开基准数据集，系统覆盖三类核心分析范式：
 1. **Task 1: 高频气动-结构载荷雨流疲劳损伤累积 (High-Frequency Aerodynamic-Structural Load Fatigue Damage)**；
 2. **Task 2: 长程轴承温度残差与健康指数退化轨迹建模 (Multivariate Bearing HI Degradation Modeling)**；
 3. **Task 3: 考虑右删失的多部件时变可靠度与生存分析 (Right-Censored Component Survival & Reliability Analysis)**。
 
-所有子集均提供高效列式存储的 **Parquet** 格式与通用 **CSV** 格式，并配备形式化数学建模、标准评测协议及自动化校验套件，旨在为智能运维、时间序列建模与可靠性工程研究提供高保真的开放评测基准。
+所有子集均提供高效列式存储的 **Parquet** 格式与通用 **CSV** 格式，并配备形式化数学建模、标准评测协议及自动化校验套件，旨在为风电智能运维、时间序列建模与可靠性工程研究提供高保真的开放评测基准。
 
 ---
 
 ![WindTurbine-RUL 基准概览](assets/dataset-overview.png)
-<p align="center"><em>Figure 1. WindTurbine-RUL 基准数据集三大核心任务概览：(a) 10 Hz 高频叶片摆振受载波动；(b) 6 台机组轴承长周期健康指数退化轨迹；(c) 包含 63.3% 右删失记录的 4 类核心部件服役寿命散点分布。</em></p>
+<p align="center"><em>Figure 1. 数据集概览：(a) 叶片摆振受载时序 (10 Hz)；(b) 轴承长周期健康指数退化曲线；(c) 4 类关键部件服役寿命与故障/删失分布。</em></p>
 
 ---
 
@@ -43,8 +43,8 @@
 - **物理背景**：风电机组叶片在旋转过程中承受显著的周期性气动载荷与随机湍流扰动，产生微观塑性变形与疲劳裂纹累积。
 - **输入表征**：多通道连续时序张量 $\mathbf{X} \in \mathbb{R}^{T \times C}$（采样频率 $f_s = 10\text{ Hz}$，包含三叶片摆振实测载荷 `blade_edge_1/2/3` 与发电机转速 `generator_rpm`，时序长度 $T=600$）。
 - **数学建模**：
-  1. 依据 ASTM E1049-85 标准三峰/四峰雨流计数算法（Rainflow Counting Algorithm），将连续随机载荷历程离散化为全循环与半循环载荷谱集合：
-     $$\mathcal{C} = \left\{ (S_{a,i}, S_{m,i}, n_i) \right\}_{i=1}^M$$
+  1. 依据 ASTM E1049-85 标准雨流计数算法（Rainflow Counting Algorithm），将连续随机载荷历程离散化为载荷谱集合：
+     $$\mathcal{C} = \{ (S_{a,i}, S_{m,i}, n_i) \}_{i=1}^M$$
      其中 $S_{a,i}$ 为循环幅值，$S_{m,i}$ 为平均应力，$n_i$ 为频次。
   2. 结合材料 $S\text{-}N$ 双对数幂律本构方程 $N_i \cdot S_{a,i}^m = C$，依 Palmgren-Miner 线性损伤累积准则计算无量纲累积损伤度 $D$：
      $$D = \sum_{i=1}^M \frac{n_i}{N_i}$$
@@ -54,14 +54,14 @@
 
 ### Task 2: 长程健康指数退化轨迹建模与阈值外推 (HI Degradation & First Hitting Time)
 
-- **物理背景**：主轴承与齿轮箱高速轴承在持续交变摩擦与温升冲击下发生微磨损、剥落或点蚀，状态监测表现为热平衡温度残差偏移与融合健康指数单调衰退。
+- **物理背景**：主轴承与齿轮箱高速轴承在持续交变摩擦与温升冲击下发生微磨损、剥落或点蚀，状态监测表现为热平衡温度残差偏移与融合健康指数衰退。
 - **输入表征**：长历时多变量离散观测序列 $\mathcal{D}_k = \{(t_\tau, y_\tau, \mathbf{z}_\tau)\}_{\tau=0}^{k}$，其中 $t_\tau \in [0, 119]$ 为累计服役天数，$\mathbf{z}_\tau$ 为实测测点与热平衡机理模型之间的温度残差（`bearing_temp_residual_degC`），$y_\tau \in (0, 1.0]$ 为多维特征融合健康指数（`health_index_hi`）。
 - **数学建模**：
   1. 建立非线性状态退化回归方程：
      $$y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)$$
      典范模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
   2. 设失效预警阈值为 $HI_{\text{th}}$，RUL 预测形式化为首达阈值时间（First Hitting Time, FHT）求解：
-     $$T_{\text{fail}} = \inf \left\{ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right\}$$
+     $$T_{\text{fail}} = \inf \left[ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right]$$
      $$\text{RUL}(t_k) = T_{\text{fail}} - t_k$$
 
 ---
@@ -74,10 +74,11 @@
   - $\delta_j \in \{0, 1\}$：事件发生指示符（$\delta_j = 1$ 为确切故障停机，$\delta_j = 0$ 为右删失截尾样本）；
   - $\mathbf{x}_j$：环境与负荷协变量（平均负载系数 `avg_load_factor`、平均环境温度 `avg_ambient_temp`）。
 - **数学建模**：
-  1. **参数化 Weibull 风险似然估计**：两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度 $f(t)$ 如下：
-     $$R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right), \quad f(t; \beta, \eta) = \frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta - 1}\exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
+  1. **参数化 Weibull 似然估计**：两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度 $f(t)$ 分别为：
+     $$R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
+     $$f(t; \beta, \eta) = \frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta - 1}\exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
      构建包含右删失项的对数似然函数并求解极大似然估计（MLE）：
-     $$\ln \mathcal{L}(\beta, \eta) = \sum_{j=1}^N \left\{ \delta_j \ln f(t_j; \beta, \eta) + (1 - \delta_j) \ln R(t_j; \beta, \eta) \right\}$$
+     $$\ln \mathcal{L}(\beta, \eta) = \sum_{j=1}^N \left[ \delta_j \ln f(t_j; \beta, \eta) + (1 - \delta_j) \ln R(t_j; \beta, \eta) \right]$$
   2. **非参数 Kaplan-Meier 经验基准**：按失效发生时刻升序重排，计算乘积限生存估计量：
      $$\hat{S}(t) = \prod_{t_j \le t} \left( 1 - \frac{d_j}{n_j} \right)$$
      其中 $d_j$ 为时刻 $t_j$ 的失效数，$n_j$ 为时刻 $t_j$ 处处于风险暴露（At-Risk）的样本总数。
@@ -155,7 +156,7 @@ print(f"[Task 3] 样本总数: {len(survival_df)}, 失效事件: {n_failed}, 右
 为确保不同研究工作在该基准上具有严格可比性，推荐遵循以下基准测试协议：
 
 1. **Task 1: 雨流疲劳损伤累积**
-   - **推荐基线**：ASTM E1049-85 四峰计数法 + Goodman 应力修正 + 典型风机叶片复合材料 S-N 曲线 ($m=10, C=10^{35}$)。
+   - **推荐基线**：ASTM E1049-85 雨流计数法 + Goodman 应力修正 + 典型风机叶片复合材料 S-N 曲线 ($m=10, C=10^{35}$)。
    - **评价指标**：等效循环数 $N_{\text{eq}}$、累积损伤度 $D$、损伤相对误差 (Relative Damage Error)。
 2. **Task 2: 退化轨迹与 RUL 预测**
    - **推荐基线**：指数外推模型 (Exponential FHT)、高斯过程回归 (GPR)、双向长短期记忆网络 (BiLSTM)、时间卷积网络 (TCN)。
@@ -170,7 +171,7 @@ print(f"[Task 3] 样本总数: {len(survival_df)}, 失效事件: {n_failed}, 右
 
 ```text
 wind-turbine-rul-datasets/
-├── datasets/                            # 核心基准数据（Parquet 与 CSV 双格式无损存储）
+├── datasets/                            # 核心基准数据（Parquet 与 CSV 双格式存储）
 │   ├── rul_blade_load_fatigue.csv       # Task 1: 气动-结构叶片载荷高频时序
 │   ├── rul_blade_load_fatigue.parquet
 │   ├── rul_bearing_degradation.csv      # Task 2: 轴承长程温度残差与健康退化时序
@@ -178,10 +179,10 @@ wind-turbine-rul-datasets/
 │   ├── rul_component_failures.csv       # Task 3: 关键部件服役记录 (单部件版)
 │   └── rul_component_failures.parquet   # Task 3: 关键部件服役记录 (四部件综合版)
 ├── assets/
-│   └── dataset-overview.png             # 基准数据集三联任务学术可视化图 (Fig. 1)
+│   └── dataset-overview.png             # 数据集总览图 (Fig. 1)
 ├── docs/
-│   ├── DATA_CARD.md                     # 学术数据卡片 (背景、机理范式、物理量标定)
-│   ├── DATA_DICTIONARY.md               # 完备字段字典、张量形状与物理量纲表
+│   ├── DATA_CARD.md                     # 数据卡片 (背景、机理范式、物理量标定)
+│   ├── DATA_DICTIONARY.md               # 字段字典、张量形状与物理量纲表
 │   └── QUALITY_REPORT.md                # 完整性校验与统计分布验证报告
 ├── scripts/
 │   └── validate.py                      # 独立 SHA-256 哈希与数值一致性自动化测试脚本
@@ -195,7 +196,7 @@ wind-turbine-rul-datasets/
 
 ## 引用 (Citation)
 
-如果您在学术论文、学位论文、工业研究或开源项目中使用了 **WindTurbine-RUL** 基准数据集，请按以下 BibTeX 条目进行引用：
+如果您在研究或项目中使用了本项目数据集，可参考以下 BibTeX 格式引用：
 
 ```bibtex
 @article{windturbine_rul_benchmark_2026,
@@ -211,4 +212,4 @@ wind-turbine-rul-datasets/
 
 ## 许可证 (License)
 
-本基准数据集依据 [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) 许可协议发布。学术研究与工程技术人员可在保留原始归属说明的前提下自由使用、分发与二次衍生。
+本项目基于 [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) 许可协议发布。在保留原始出处说明的前提下，可自由使用、分发与二次衍生。
