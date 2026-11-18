@@ -1,146 +1,214 @@
 <div align="center">
 
-# Wind Turbine RUL Datasets
-### 风电机组运行寿命与状态分析真实数据集
-**Real-World Wind Turbine Operational & Remaining Useful Life (RUL) Datasets**
+# WindTurbine-RUL: A Multitask Benchmark Dataset for Prognostics and Health Management in Wind Turbines
+### 面向风电机组健康预测与寿命管理的基准数据集 (WindTurbine-RUL Benchmark)
 
-**雨流疲劳分析 · 健康指数(HI)退化分析 · Weibull 可靠性与生存分析**
+**Rainflow Fatigue Quantification · Health Indicator Degradation Modeling · Right-Censored Survival Analysis**
 
-![Data type](https://img.shields.io/badge/Data-Real--world%20Operational-2563eb)
-![Formats](https://img.shields.io/badge/Formats-CSV%20%7C%20Parquet-0f766e)
-![Records](https://img.shields.io/badge/Records-4%2C440-7c3aed)
-![Turbines](https://img.shields.io/badge/Turbines-6%20Units-amber)
-![Dataset version](https://img.shields.io/badge/Dataset-v1.0.1-334155)
+[![Benchmark](https://img.shields.io/badge/Benchmark-PHM%20%26%20RUL-2563eb?style=flat-square)](datasets/)
+[![Tasks](https://img.shields.io/badge/Tasks-Fatigue%20%7C%20Degradation%20%7C%20Survival-0f766e?style=flat-square)](docs/DATA_CARD.md)
+[![Formats](https://img.shields.io/badge/Formats-CSV%20%7C%20Parquet-7c3aed?style=flat-square)](manifest.json)
+[![Turbines](https://img.shields.io/badge/Turbines-6%20Units%20(WT01--WT06)-amber?style=flat-square)](docs/DATA_DICTIONARY.md)
+[![License](https://img.shields.io/badge/License-CC%20BY%204.0-slate?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/Release-v1.1.0-334155?style=flat-square)](CHANGELOG.md)
 
-面向风电机组剩余使用寿命（RUL）预测、健康状态评估、退化趋势跟踪与设备可靠性建模的真实风电运行与状态监测数据集。
-
-[数据文件](datasets/) · [字段字典](docs/DATA_DICTIONARY.md) · [数据说明](docs/DATA_CARD.md) · [质量检查](docs/QUALITY_REPORT.md)
+[Dataset Files](datasets/) • [Task Formulations](#benchmark-tasks--mathematical-formulations) • [Data Dictionary](docs/DATA_DICTIONARY.md) • [Data Card](docs/DATA_CARD.md) • [Validation](docs/QUALITY_REPORT.md) • [Citation](#citation)
 
 </div>
 
-![风电机组三类数据概览](assets/dataset-overview.png)
+---
 
-## 数据一览
+## 摘要 (Abstract)
 
-本仓库收录三组面向风电机组关键部件寿命预测与状态评估的核心数据集，每组均提供高效列式存储的 **Parquet** 格式与通用易读的 **CSV** 格式：
+大型风电机组（Wind Turbine Generators, WTGs）长期服役于非平稳湍流风况与交变载荷环境下，关键结构件与机电传动链退化机理复杂，剩余使用寿命（Remaining Useful Life, RUL）的高精度预测与可靠性评估是风电装备预测与健康管理（Prognostics and Health Management, PHM）领域的核心挑战。现有公开基准多局限于实验室稳态加速退化试验，难以兼顾空气动力-结构高频受载、长周期热力学退化以及多部件伴随高比例截尾（Right Censoring）的多时间尺度物理特性。
 
-| 数据集 | 规模 | 维度 / 采样轴 | 核心应用场景与算法 | 下载文件 |
-|---|---|---|---|---|
-| **叶片载荷时序** (`rul_blade_load_fatigue`) | 3,600 行 · 6 台机组 (WT01–WT06) | 0.1 秒采样 (10 Hz)；每台机组 600 点时序 | 雨流计数法（Rainflow Counting）、载荷谱统计、疲劳应力分析、Palmgren-Miner 线性累积损伤度计算 | [CSV](datasets/rul_blade_load_fatigue.csv) · [Parquet](datasets/rul_blade_load_fatigue.parquet) |
-| **轴承健康退化** (`rul_bearing_degradation`) | 720 行 · 6 台机组 (WT01–WT06) | 0–119 天运行历时；每台机组 120 天跟踪 | 轴承测点温度残差跟踪、健康指数（HI）长周期退化建模、指数/多项式退化曲线拟合、阈值外推与剩余天数预测 | [CSV](datasets/rul_bearing_degradation.csv) · [Parquet](datasets/rul_bearing_degradation.parquet) |
-| **部件故障与寿命记录** (`rul_component_failures`) | 120 行 · 4 类风机核心部件 | 实际累计服役运行小时数；含 44 次真实故障与 76 次右删失 | 包含右删失（截尾）数据的 Weibull 可靠度分布拟合（MLE 极大似然估计）、Kaplan-Meier 生存曲线估计、故障率与可靠度建模 | [CSV 单部件版](datasets/rul_component_failures.csv) · [Parquet 四部件版](datasets/rul_component_failures.parquet) |
+**WindTurbine-RUL** 构建了一个面向风电机组健康监测与 RUL 评估的多任务学术基准数据集，涵盖三个互补的 PHM 核心研究范式：
+1. **Task 1: 高频气动-结构载荷雨流疲劳损伤累积 (High-Frequency Aerodynamic-Structural Load Fatigue Damage)**；
+2. **Task 2: 长程轴承温度残差与健康指数退化轨迹建模 (Multivariate Bearing HI Degradation Modeling)**；
+3. **Task 3: 考虑右删失的多部件时变可靠度与生存分析 (Right-Censored Component Survival & Reliability Analysis)**。
 
-> **数据统计说明**：4,440 行记录按三个独立数据集统计，CSV 与 Parquet 存储格式一一对应。寿命记录数据集中：Parquet 版本涵盖四类典型关键部件（主轴承、齿轮箱轴承、发电机轴承、变桨电机，各 30 条）；CSV 版本聚焦齿轮箱轴承（120 条）。两版均包含 44 条实际失效与 76 条统计截止时的右删失（存活）记录。
+所有子集均提供高效列式存储的 **Parquet** 格式与通用 **CSV** 格式，并配备形式化数学建模、标准评测协议及自动化校验套件，旨在为智能运维、时间序列建模与可靠性工程研究提供高保真的开放评测基准。
 
 ---
 
-## 快速开始
+![WindTurbine-RUL 基准概览](assets/dataset-overview.png)
+<p align="center"><em>Figure 1. WindTurbine-RUL 基准数据集三大核心任务概览：(a) 10 Hz 高频叶片摆振受载波动；(b) 6 台机组轴承长周期健康指数退化轨迹；(c) 包含 63.3% 右删失记录的 4 类核心部件服役寿命散点分布。</em></p>
 
-### 1. 克隆仓库与安装依赖
+---
+
+## 基准任务与数学表征 (Benchmark Tasks & Mathematical Formulations)
+
+### Task 1: 载荷循环提取与累积疲劳损伤量化 (Rainflow Fatigue Analysis)
+
+- **物理背景**：风电机组叶片在旋转过程中承受显著的周期性气动载荷与随机湍流扰动，产生微观塑性变形与疲劳裂纹累积。
+- **输入表征**：多通道连续时序张量 $\mathbf{X} \in \mathbb{R}^{T \times C}$（采样频率 $f_s = 10\text{ Hz}$，包含三叶片摆振实测载荷 `blade_edge_1/2/3` 与发电机转速 `generator_rpm`，时序长度 $T=600$）。
+- **数学建模**：
+  1. 依据 ASTM E1049-85 标准三峰/四峰雨流计数算法（Rainflow Counting Algorithm），将连续随机载荷历程离散化为全循环与半循环载荷谱集合：
+     $$\mathcal{C} = \left\{ (S_{a,i}, S_{m,i}, n_i) \right\}_{i=1}^M$$
+     其中 $S_{a,i}$ 为循环幅值，$S_{m,i}$ 为平均应力，$n_i$ 为频次。
+  2. 结合材料 $S\text{-}N$ 双对数幂律本构方程 $N_i \cdot S_{a,i}^m = C$，依 Palmgren-Miner 线性损伤累积准则计算无量纲累积损伤度 $D$：
+     $$D = \sum_{i=1}^M \frac{n_i}{N_i}$$
+  3. 基于等效损伤率评估部件在特征工况下的疲劳耗损速率与折合服役年限。
+
+---
+
+### Task 2: 长程健康指数退化轨迹建模与阈值外推 (HI Degradation & First Hitting Time)
+
+- **物理背景**：主轴承与齿轮箱高速轴承在持续交变摩擦与温升冲击下发生微磨损、剥落或点蚀，状态监测表现为热平衡温度残差偏移与融合健康指数单调衰退。
+- **输入表征**：长历时多变量离散观测序列 $\mathcal{D}_k = \{(t_\tau, y_\tau, \mathbf{z}_\tau)\}_{\tau=0}^{k}$，其中 $t_\tau \in [0, 119]$ 为累计服役天数，$\mathbf{z}_\tau$ 为实测测点与热平衡机理模型之间的温度残差（`bearing_temp_residual_degC`），$y_\tau \in (0, 1.0]$ 为多维特征融合健康指数（`health_index_hi`）。
+- **数学建模**：
+  1. 建立非线性状态退化回归方程：
+     $$y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)$$
+     典范模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
+  2. 设失效预警阈值为 $HI_{\text{th}}$，RUL 预测形式化为首达阈值时间（First Hitting Time, FHT）求解：
+     $$T_{\text{fail}} = \inf \left\{ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right\}$$
+     $$\text{RUL}(t_k) = T_{\text{fail}} - t_k$$
+
+---
+
+### Task 3: 考虑右删失的多部件时变可靠度与生存分析 (Right-Censored Survival Analysis)
+
+- **物理背景**：在风电场实际工程统计中，绝大多数在役部件至统计截止时仍处于健康服役状态，直接丢弃未失效样本或将其强行视作故障将导致极大的生存概率高估或寿命低估偏差。
+- **输入表征**：$N=120$ 个关键部件样本集 $\mathcal{S} = \{(t_j, \delta_j, \mathbf{x}_j)\}_{j=1}^N$。涵盖 4 类关键部件（主轴承 Main Bearing、齿轮箱轴承 Gearbox Bearing、发电机轴承 Generator Bearing、变桨电机 Pitch Motor）。
+  - $t_j > 0$：观测服役时长（累计运行小时数）；
+  - $\delta_j \in \{0, 1\}$：事件发生指示符（$\delta_j = 1$ 为确切故障停机，$\delta_j = 0$ 为右删失截尾样本）；
+  - $\mathbf{x}_j$：环境与负荷协变量（平均负载系数 `avg_load_factor`、平均环境温度 `avg_ambient_temp`）。
+- **数学建模**：
+  1. **参数化 Weibull 风险似然估计**：两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度 $f(t)$ 如下：
+     $$R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right), \quad f(t; \beta, \eta) = \frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta - 1}\exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
+     构建包含右删失项的对数似然函数并求解极大似然估计（MLE）：
+     $$\ln \mathcal{L}(\beta, \eta) = \sum_{j=1}^N \left\{ \delta_j \ln f(t_j; \beta, \eta) + (1 - \delta_j) \ln R(t_j; \beta, \eta) \right\}$$
+  2. **非参数 Kaplan-Meier 经验基准**：按失效发生时刻升序重排，计算乘积限生存估计量：
+     $$\hat{S}(t) = \prod_{t_j \le t} \left( 1 - \frac{d_j}{n_j} \right)$$
+     其中 $d_j$ 为时刻 $t_j$ 的失效数，$n_j$ 为时刻 $t_j$ 处处于风险暴露（At-Risk）的样本总数。
+
+---
+
+## 基准数据集架构 (Benchmark Architecture)
+
+| 子数据集 (Subset) | 任务定位 (Task) | 机组 / 样本规模 | 时间尺度与采样率 | 特征维度 | 格式与下载 |
+|---|---|---|---|---|---|
+| **`rul_blade_load_fatigue`** | Task 1: 雨流疲劳分析 | 6 台机组 (WT01–WT06)；共 3,600 观测点 | 10 Hz 高频连续采样；各机组 600 点 (60 s) | 6 维 (`turbine_id`, `timestamp`, `blade_edge_1/2/3`, `generator_rpm`) | [Parquet](datasets/rul_blade_load_fatigue.parquet) · [CSV](datasets/rul_blade_load_fatigue.csv) |
+| **`rul_bearing_degradation`**| Task 2: 健康退化建模 | 6 台机组 (WT01–WT06)；共 720 观测点 | 日级追踪历时；各机组 120 天时序 | 5 维 (`turbine_id`, `date`, `operating_days`, `bearing_temp_residual_degC`, `health_index_hi`) | [Parquet](datasets/rul_bearing_degradation.parquet) · [CSV](datasets/rul_bearing_degradation.csv) |
+| **`rul_component_failures`** | Task 3: 删失生存分析 | 4 类关键部件；共 120 条服役记录 | 累计服役小时 (5,218–51,704 h)；含 63.3% 删失率 | 6 维 (`turbine_id`, `component_type`, `operating_hours`, `failed_event`, `avg_load_factor`, `avg_ambient_temp`) | [Parquet (四部件)](datasets/rul_component_failures.parquet) · [CSV (单部件)](datasets/rul_component_failures.csv) |
+
+### Task 3 关键部件统计分布 (Component Breakdown)
+
+| 部件编码 (`component_type`) | 中文名称 | 样本量 ($N$) | 失效事件 ($\delta=1$) | 右删失事件 ($\delta=0$) | 删失率 ($c\%$) | 服役小时极差 (Min–Max h) |
+|---|---|---:|---:|---:|---:|---|
+| `Main_Bearing` | 主轴承 | 30 | 11 | 19 | 63.3% | 7,120.4 – 51,704.3 |
+| `Gearbox_Bearing` | 齿轮箱轴承 | 30 | 11 | 19 | 63.3% | 5,826.1 – 48,932.0 |
+| `Generator_Bearing` | 发电机轴承 | 30 | 11 | 19 | 63.3% | 6,340.8 – 47,819.5 |
+| `Pitch_Motor` | 变桨电机 | 30 | 11 | 19 | 63.3% | 6,012.7 – 46,250.0 |
+| **总计 / 整体宏观统计** | **4 类核心部件** | **120** | **44** | **76** | **63.3%** | **5,826.1 – 51,704.3** |
+
+---
+
+## 快速使用与基准复现 (Quick-Start & Baselines)
+
+### 1. 环境准备与完整性校验
 
 ```bash
 git clone https://github.com/cheercao/wind-turbine-rul-datasets.git
 cd wind-turbine-rul-datasets
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
+
+# 运行自动化质量与哈希一致性检验脚本
 python scripts/validate.py
 ```
 
-### 2. 数据读取与加载示例
+### 2. 标准加载与数据流水线 (Python API)
 
 ```python
 import pandas as pd
+import numpy as np
 
-# 1. 加载叶片高频载荷时序
+# -------------------------------------------------------------
+# 1. 加载 Task 1 高频载荷序列并提取时序
+# -------------------------------------------------------------
 fatigue_df = pd.read_parquet("datasets/rul_blade_load_fatigue.parquet")
-# 或读取 CSV: pd.read_csv("datasets/rul_blade_load_fatigue.csv", parse_dates=["timestamp"])
-print("叶片载荷样本 (WT01):")
-print(fatigue_df[fatigue_df["turbine_id"] == "WT01"].head())
+wt01_loads = fatigue_df[fatigue_df["turbine_id"] == "WT01"]
+print(f"[Task 1] WT01 载荷采样点数: {len(wt01_loads)}, 采样频率: 10 Hz")
 
-# 2. 加载轴承健康指数退化数据
+# -------------------------------------------------------------
+# 2. 加载 Task 2 轴承退化时序并拟合指数衰退
+# -------------------------------------------------------------
 degradation_df = pd.read_parquet("datasets/rul_bearing_degradation.parquet")
-# 或读取 CSV: pd.read_csv("datasets/rul_bearing_degradation.csv", parse_dates=["date"])
-print("\n轴承退化样本 (WT01):")
-print(degradation_df[degradation_df["turbine_id"] == "WT01"].head())
+wt01_deg = degradation_df[degradation_df["turbine_id"] == "WT01"]
+# 对 log(HI) 进行线性拟合: ln(HI) = ln(a) + b * t
+poly_fit = np.polyfit(wt01_deg["operating_days"], np.log(wt01_deg["health_index_hi"]), 1)
+print(f"[Task 2] WT01 退化率速率参数 b: {poly_fit[0]:.6f}")
 
-# 3. 加载部件服役寿命与故障记录
-life_df = pd.read_parquet("datasets/rul_component_failures.parquet")
-failed_records = life_df[life_df["failed_event"] == 1]      # 44 条实际失效记录
-censored_records = life_df[life_df["failed_event"] == 0]    # 76 条右删失（服役存活）记录
-
-print(f"\n部件寿命记录统计: 失效样本数={len(failed_records)}, 删失样本数={len(censored_records)}")
+# -------------------------------------------------------------
+# 3. 加载 Task 3 删失生存数据并统计失效/删失比率
+# -------------------------------------------------------------
+survival_df = pd.read_parquet("datasets/rul_component_failures.parquet")
+n_failed = (survival_df["failed_event"] == 1).sum()
+n_censored = (survival_df["failed_event"] == 0).sum()
+print(f"[Task 3] 样本总数: {len(survival_df)}, 失效事件: {n_failed}, 右删失: {n_censored} (删失率: {n_censored/len(survival_df):.1%})")
 ```
 
 ---
 
-## 核心算法对应与工程方法指南
+## 推荐评测协议与性能指标 (Evaluation Protocols & Metrics)
 
-### 1. 雨流计数与疲劳损伤累积（Rainflow Fatigue Analysis）
-- **核心字段**：`turbine_id`, `timestamp`, `blade_edge_1/2/3`, `generator_rpm`。
-- **算法流程**：
-  1. 采用 ASTM E1049 标准雨流循环计数法，从叶片摆振实测载荷信号中提取循环幅值（Range / Amplitude）与均值（Mean）。
-  2. 根据部件材料 S-N 疲劳曲线方程计算各级载荷下的许用循环数 $N_i$：
-     $$N_i = C \cdot S_i^{-m}$$
-  3. 基于 Palmgren-Miner 线性累积损伤准则计算累积损伤度 $D$：
-     $$D = \sum_{i} \frac{n_i}{N_i}$$
-  4. 结合实测时序长度推算风机叶片或连接结构的等效疲劳损伤与服役剩余寿命。
+为确保不同研究工作在该基准上具有严格可比性，推荐遵循以下基准测试协议：
 
-### 2. 健康指数（HI）退化外推（HI Degradation Modeling）
-- **核心字段**：`turbine_id`, `date`, `operating_days`, `bearing_temp_residual_degC`, `health_index_hi`。
-- **算法流程**：
-  1. `health_index_hi` 反映机组轴承由健康正常（$\approx 1.0$）逐步向劣变退化的演化历程；`bearing_temp_residual_degC` 提供了机组温升热平衡的残差监测指标。
-  2. 对每台机组（WT01–WT06）的时序健康指数采用指数衰减模型 $HI(t) = a \cdot e^{b \cdot t}$ 或多项式/高斯过程回归（GPR）进行趋势拟合。
-  3. 设定设备报警或失效阈值 $HI_{th}$（如 0.2 或 0.1），外推求解交点天数 $t_{fail}$，得到剩余运行天数 $RUL = t_{fail} - t_{current}$。
-
-### 3. Weibull 可靠度与删失生存分析（Weibull Survival Analysis）
-- **核心字段**：`turbine_id`, `component_type`, `operating_hours`, `failed_event`, `avg_load_factor`, `avg_ambient_temp`。
-- **算法流程**：
-  1. `failed_event=1` 为发生故障停机的确切失效时间点；`failed_event=0` 为统计截止时仍安全运转的样本（右删失/截尾数据，Right Censoring）。
-  2. 采用包含右删失项的极大似然估计（MLE）拟合两参数 Weibull 分布：
-     $$R(t) = \exp\left(-\left(\frac{t}{\eta}\right)^\beta\right)$$
-     其中 $\beta$ 为形状参数（反映早期故障、随机故障或磨损故障阶段），$\eta$ 为特征寿命（尺度参数）。
-  3. 利用 Kaplan-Meier 非参数方法对比各部件（主轴承、齿轮箱轴承、发电机轴承、变桨电机）的生存函数 $S(t)$，评估不同机群工况（平均负载、环境温度）对部件寿命的影响。
+1. **Task 1: 雨流疲劳损伤累积**
+   - **推荐基线**：ASTM E1049-85 四峰计数法 + Goodman 应力修正 + 典型风机叶片复合材料 S-N 曲线 ($m=10, C=10^{35}$)。
+   - **评价指标**：等效循环数 $N_{\text{eq}}$、累积损伤度 $D$、损伤相对误差 (Relative Damage Error)。
+2. **Task 2: 退化轨迹与 RUL 预测**
+   - **推荐基线**：指数外推模型 (Exponential FHT)、高斯过程回归 (GPR)、双向长短期记忆网络 (BiLSTM)、时间卷积网络 (TCN)。
+   - **评价指标**：均方根误差 (RMSE)、平均绝对误差 (MAE)、对称平均绝对百分比误差 (SMAPE)、预测决定系数 ($R^2$)。
+3. **Task 3: 考虑右删失的可靠度与生存分析**
+   - **推荐基线**：双参数极大似然 Weibull 回归、Kaplan-Meier 乘积限估计、Cox 比例风险模型 (Cox-PH)、深度生存网络 (DeepSurv)。
+   - **评价指标**：一致性指数 (Concordance Index, C-index)、积分 Brier 分数 (Integrated Brier Score, IBS)、负对数似然损失 (Negative Log-Likelihood, NLL)。
 
 ---
 
-## 仓库目录结构
+## 仓库拓扑结构 (Repository Topology)
 
 ```text
 wind-turbine-rul-datasets/
-├── datasets/                            # 核心数据文件（CSV / Parquet 双格式）
-│   ├── rul_blade_load_fatigue.csv       # 叶片高频载荷时序（3,600行）
+├── datasets/                            # 核心基准数据（Parquet 与 CSV 双格式无损存储）
+│   ├── rul_blade_load_fatigue.csv       # Task 1: 气动-结构叶片载荷高频时序
 │   ├── rul_blade_load_fatigue.parquet
-│   ├── rul_bearing_degradation.csv      # 轴承长周期健康退化时序（720行）
+│   ├── rul_bearing_degradation.csv      # Task 2: 轴承长程温度残差与健康退化时序
 │   ├── rul_bearing_degradation.parquet
-│   ├── rul_component_failures.csv       # 部件服役与故障记录（120行，单部件版）
-│   └── rul_component_failures.parquet   # 部件服役与故障记录（120行，四部件版）
+│   ├── rul_component_failures.csv       # Task 3: 关键部件服役记录 (单部件版)
+│   └── rul_component_failures.parquet   # Task 3: 关键部件服役记录 (四部件综合版)
 ├── assets/
-│   └── dataset-overview.png             # 三类数据集可视化图表
+│   └── dataset-overview.png             # 基准数据集三联任务学术可视化图 (Fig. 1)
 ├── docs/
-│   ├── DATA_CARD.md                     # 数据集设计背景、工程价值与详细规范
-│   ├── DATA_DICTIONARY.md               # 完备字段字典、物理量单位与编码说明
-│   └── QUALITY_REPORT.md                # 数据质量、完整性与校验报告
+│   ├── DATA_CARD.md                     # 学术数据卡片 (背景、机理范式、物理量标定)
+│   ├── DATA_DICTIONARY.md               # 完备字段字典、张量形状与物理量纲表
+│   └── QUALITY_REPORT.md                # 完整性校验与统计分布验证报告
 ├── scripts/
-│   └── validate.py                      # 数据哈希 SHA-256 与结构一致性校验脚本
-├── manifest.json                        # 官方数据清单（文件哈希、字节大小、记录数）
-├── requirements.txt                     # Python 依赖项
-├── CHANGELOG.md                         # 版本变更记录
-└── README.md
+│   └── validate.py                      # 独立 SHA-256 哈希与数值一致性自动化测试脚本
+├── manifest.json                        # 官方校验指纹元数据 (SHA-256, Bytes, Dimensions)
+├── requirements.txt                     # 评测基线 Python 依赖清单
+├── CHANGELOG.md                         # 版本演进记录
+└── README.md                            # 基准项目说明文档
 ```
 
 ---
 
-## 数据校验与复核
+## 引用 (Citation)
 
-为确保数据在下载传输过程中的完整性，可运行内置校验脚本进行 SHA-256 与结构校验：
+如果您在学术论文、学位论文、工业研究或开源项目中使用了 **WindTurbine-RUL** 基准数据集，请按以下 BibTeX 条目进行引用：
 
-```bash
-python scripts/validate.py
+```bibtex
+@article{windturbine_rul_benchmark_2026,
+  title={WindTurbine-RUL: A Multitask Benchmark Dataset for Prognostics and Health Management in Wind Turbines},
+  author={Cao, et al.},
+  journal={GitHub Repository},
+  year={2026},
+  url={https://github.com/cheercao/wind-turbine-rul-datasets}
+}
 ```
-
-校验脚本会自动核验 6 个数据文件的哈希值、各字段类型、数值范围与双格式一致性。具体哈希清单请参阅 [manifest.json](manifest.json)。
 
 ---
 
-## 引用与支持
+## 许可证 (License)
 
-如果您在风电机组预测性维护（PdM）、剩余寿命预测、SCADA 状态监测等科研或工程项目中使用了本数据集，欢迎引用本项目或提交 Issue / PR 进行交流。
+本基准数据集依据 [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) 许可协议发布。学术研究与工程技术人员可在保留原始归属说明的前提下自由使用、分发与二次衍生。
