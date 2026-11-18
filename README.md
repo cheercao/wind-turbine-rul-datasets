@@ -12,7 +12,7 @@
 [![License](https://img.shields.io/badge/License-CC%20BY%204.0-slate?style=flat-square)](LICENSE)
 [![Version](https://img.shields.io/badge/Release-v1.1.0-334155?style=flat-square)](CHANGELOG.md)
 
-[Dataset Files](datasets/) • [Task Formulations](#benchmark-tasks--mathematical-formulations) • [Data Dictionary](docs/DATA_DICTIONARY.md) • [Data Card](docs/DATA_CARD.md) • [Validation](docs/QUALITY_REPORT.md) • [Citation](#citation)
+[Dataset Files](datasets/) • [Task Formulations](#基准任务与数学表征-benchmark-tasks--mathematical-formulations) • [Data Dictionary](docs/DATA_DICTIONARY.md) • [Data Card](docs/DATA_CARD.md) • [Validation](docs/QUALITY_REPORT.md) • [Citation](#引用-citation)
 
 </div>
 
@@ -42,13 +42,28 @@
 
 - **物理背景**：风电机组叶片在旋转过程中承受显著的周期性气动载荷与随机湍流扰动，产生微观塑性变形与疲劳裂纹累积。
 - **输入表征**：多通道连续时序张量 $\mathbf{X} \in \mathbb{R}^{T \times C}$（采样频率 $f_s = 10\text{ Hz}$，包含三叶片摆振实测载荷 `blade_edge_1/2/3` 与发电机转速 `generator_rpm`，时序长度 $T=600$）。
-- **数学建模**：
-  1. 依据 ASTM E1049-85 标准雨流计数算法（Rainflow Counting Algorithm），将连续随机载荷历程离散化为载荷谱集合：
-     $$\mathcal{C} = \{ (S_{a,i}, S_{m,i}, n_i) \}_{i=1}^M$$
-     其中 $S_{a,i}$ 为循环幅值，$S_{m,i}$ 为平均应力，$n_i$ 为频次。
-  2. 结合材料 $S\text{-}N$ 双对数幂律本构方程 $N_i \cdot S_{a,i}^m = C$，依 Palmgren-Miner 线性损伤累积准则计算无量纲累积损伤度 $D$：
-     $$D = \sum_{i=1}^M \frac{n_i}{N_i}$$
-  3. 基于等效损伤率评估部件在特征工况下的疲劳耗损速率与折合服役年限。
+
+#### 数学建模与计算流程
+
+**1. 载荷循环提取与雨流离散化**
+
+依据 ASTM E1049-85 标准雨流计数算法（Rainflow Counting Algorithm），将连续随机载荷历程离散化为载荷谱集合：
+
+$$
+\mathcal{C} = \{ (S_{a,i}, S_{m,i}, n_i) \}_{i=1}^M
+$$
+
+其中 $S_{a,i}$ 为循环幅值，$S_{m,i}$ 为平均应力，$n_i$ 为该级循环频次。
+
+**2. Palmgren-Miner 线性累积疲劳损伤**
+
+结合材料 $S\text{-}N$ 双对数幂律本构方程 $N_i \cdot S_{a,i}^m = C$，依 Palmgren-Miner 准则计算无量纲累积疲劳损伤度 $D$：
+
+$$
+D = \sum_{i=1}^M \frac{n_i}{N_i}
+$$
+
+基于实测时序的损伤累积率，进一步评估部件在特征工况下的疲劳耗损速率与折合服役年限。
 
 ---
 
@@ -56,13 +71,30 @@
 
 - **物理背景**：主轴承与齿轮箱高速轴承在持续交变摩擦与温升冲击下发生微磨损、剥落或点蚀，状态监测表现为热平衡温度残差偏移与融合健康指数衰退。
 - **输入表征**：长历时多变量离散观测序列 $\mathcal{D}_k = \{(t_\tau, y_\tau, \mathbf{z}_\tau)\}_{\tau=0}^{k}$，其中 $t_\tau \in [0, 119]$ 为累计服役天数，$\mathbf{z}_\tau$ 为实测测点与热平衡机理模型之间的温度残差（`bearing_temp_residual_degC`），$y_\tau \in (0, 1.0]$ 为多维特征融合健康指数（`health_index_hi`）。
-- **数学建模**：
-  1. 建立非线性状态退化回归方程：
-     $$y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)$$
-     典范模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
-  2. 设失效预警阈值为 $HI_{\text{th}}$，RUL 预测形式化为首达阈值时间（First Hitting Time, FHT）求解：
-     $$T_{\text{fail}} = \inf \left[ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right]$$
-     $$\text{RUL}(t_k) = T_{\text{fail}} - t_k$$
+
+#### 数学建模与计算流程
+
+**1. 非线性状态退化动力学建模**
+
+建立非线性状态退化回归方程：
+
+$$
+y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)
+$$
+
+典范模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
+
+**2. 首达阈值时间（First Hitting Time, FHT）预测**
+
+设失效预警阈值为 $HI_{\text{th}}$，剩余寿命预测形式化为首达阈值时间求解：
+
+$$
+T_{\text{fail}} = \inf \left[ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right]
+$$
+
+$$
+\text{RUL}(t_k) = T_{\text{fail}} - t_k
+$$
 
 ---
 
@@ -73,15 +105,36 @@
   - $t_j > 0$：观测服役时长（累计运行小时数）；
   - $\delta_j \in \{0, 1\}$：事件发生指示符（$\delta_j = 1$ 为确切故障停机，$\delta_j = 0$ 为右删失截尾样本）；
   - $\mathbf{x}_j$：环境与负荷协变量（平均负载系数 `avg_load_factor`、平均环境温度 `avg_ambient_temp`）。
-- **数学建模**：
-  1. **参数化 Weibull 似然估计**：两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度 $f(t)$ 分别为：
-     $$R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
-     $$f(t; \beta, \eta) = \frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta - 1}\exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)$$
-     构建包含右删失项的对数似然函数并求解极大似然估计（MLE）：
-     $$\ln \mathcal{L}(\beta, \eta) = \sum_{j=1}^N \left[ \delta_j \ln f(t_j; \beta, \eta) + (1 - \delta_j) \ln R(t_j; \beta, \eta) \right]$$
-  2. **非参数 Kaplan-Meier 经验基准**：按失效发生时刻升序重排，计算乘积限生存估计量：
-     $$\hat{S}(t) = \prod_{t_j \le t} \left( 1 - \frac{d_j}{n_j} \right)$$
-     其中 $d_j$ 为时刻 $t_j$ 的失效数，$n_j$ 为时刻 $t_j$ 处处于风险暴露（At-Risk）的样本总数。
+
+#### 数学建模与计算流程
+
+**1. 参数化 Weibull 似然估计（处理右删失数据）**
+
+两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度函数 $f(t)$ 分别为：
+
+$$
+R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)
+$$
+
+$$
+f(t; \beta, \eta) = \frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta - 1}\exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)
+$$
+
+构建包含右删失项的对数似然函数并求解极大似然估计（MLE）：
+
+$$
+\ln \mathcal{L}(\beta, \eta) = \sum_{j=1}^N \left[ \delta_j \ln f(t_j; \beta, \eta) + (1 - \delta_j) \ln R(t_j; \beta, \eta) \right]
+$$
+
+**2. 非参数 Kaplan-Meier 经验基准**
+
+按失效发生时刻升序重排，计算乘积限生存估计量：
+
+$$
+\hat{S}(t) = \prod_{t_j \le t} \left( 1 - \frac{d_j}{n_j} \right)
+$$
+
+其中 $d_j$ 为时刻 $t_j$ 的失效数，$n_j$ 为时刻 $t_j$ 处处于风险暴露（At-Risk）的样本总数。
 
 ---
 
