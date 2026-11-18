@@ -1,0 +1,84 @@
+[
+  {
+    "path": "datasets/rul_blade_load_fatigue.csv",
+    "bytes": 375487,
+    "sha256": "017df366a64f1c61ce4fceb2fca511dbceb5e73758a12558e3b6bcf79c3bde7f",
+    "rows": 3600,
+    "columns": [
+      "turbine_id",
+      "timestamp",
+      "blade_edge_1",
+      "blade_edge_2",
+      "blade_edge_3",
+      "generator_rpm"
+    ]
+  },
+  {
+    "path": "datasets/rul_blade_load_fatigue.parquet",
+    "bytes": 145637,
+    "sha256": "ec3699ad6c08df8361eb90754fba3fbc08181ad71296abd4a527658ad89f5bd1",
+    "rows": 3600,
+    "columns": [
+      "turbine_id",
+      "timestamp",
+      "blade_edge_1",
+      "blade_edge_2",
+      "blade_edge_3",
+      "generator_rpm"
+    ]
+  },
+  {
+    "path": "datasets/rul_bearing_degradation.csv",
+    "bytes": 41232,
+    "sha256": "dda67fd45a8b4138c2600e1e074786e96c91ab5ad9911e826a2bc3d15ad36f19",
+    "rows": 720,
+    "columns": [
+      "turbine_id",
+      "date",
+      "operating_days",
+      "bearing_temp_residual_degC",
+      "health_index_hi"
+    ]
+  },
+  {
+    "path": "datasets/rul_bearing_degradation.parquet",
+    "bytes": 18179,
+    "sha256": "8f54b986879541c6f20bb569d80e4ee0a088c77905df0c1bc271afa7f32bfd6e",
+    "rows": 720,
+    "columns": [
+      "turbine_id",
+      "date",
+      "operating_days",
+      "bearing_temp_residual_degC",
+      "health_index_hi"
+    ]
+  },
+  {
+    "path": "datasets/rul_component_failures.csv",
+    "bytes": 5112,
+    "sha256": "01f31f1868b91e8bfaf230d7f2f4d590ce8a5891ae02398df369d98920ac250b",
+    "rows": 120,
+    "columns": [
+      "turbine_id",
+      "component_type",
+      "operating_hours",
+      "failed_event",
+      "avg_load_factor",
+      "avg_ambient_temp"
+    ]
+  },
+  {
+    "path": "datasets/rul_component_failures.parquet",
+    "bytes": 6436,
+    "sha256": "a2c3cdfa9dbf9e4407e9c84c98751818541a8a64b9d8f0e1184e2211666e1eb3",
+    "rows": 120,
+    "columns": [
+      "turbine_id",
+      "component_type",
+      "operating_hours",
+      "failed_event",
+      "avg_load_factor",
+      "avg_ambient_temp"
+    ]
+  }
+]
