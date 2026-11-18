@@ -1,31 +1,81 @@
-# 风机三类寿命分析模拟数据
+<div align="center">
 
-本仓库整理三类软件开发及演示用的**模拟数据**，不是风场实测数据、真实故障日志或已验证的寿命基准。
-CSV 与 Parquet 各一份，共三个数据集、六个数据文件。文件直接复制自本地项目，未重新生成或修改数值。
+# Wind Turbine RUL Datasets
+### 风机剩余寿命预测模拟数据集
 
-| 数据文件前缀 | 行数 | 用途 | 主要字段 |
-|---|---:|---|---|
-| rul_blade_load_fatigue | 3600 | 6台机组的雨流疲劳分析输入 | turbine_id, timestamp, blade_edge_1/2/3, generator_rpm |
-| rul_bearing_degradation | 720 | 6台机组的健康指数退化分析输入 | turbine_id, date, operating_days, bearing_temp_residual_degC, health_index_hi |
-| rul_component_failures | 120 | 4类部件的生存分析输入 | turbine_id, component_type, operating_hours, failed_event, avg_load_factor, avg_ambient_temp |
+**雨流疲劳 · 健康指数退化 · Weibull 生存分析**
 
-## 字段及使用说明
+![Data type](https://img.shields.io/badge/Data-Synthetic-2563eb)
+![Formats](https://img.shields.io/badge/Formats-CSV%20%7C%20Parquet-0f766e)
+![Records](https://img.shields.io/badge/Records-4%2C440-7c3aed)
+![Dataset version](https://img.shields.io/badge/Dataset-v1.0.0-334155)
 
-- 疲劳：各机组600个点，采样间隔0.1秒，时间戳跨度59.9秒。叶片载荷字段不能未经标定直接当作MPa应力，S-N参数必须匹配载荷定义和单位。
-- 退化：各机组120个点，operating_days为0到119，health_index_hi为健康指数。导入原软件时将timestamp映射到date。失效阈值需按应用校准；拟合无未来交点时不能凭空给出剩余天数。
-- 生存：failed_event=1表示失效，0表示右删失；44条失效、76条右删失，每类部件30条。operating_hours表示失效或观察终止时的累计运行小时，不能把76条删失记录全部视为失效。
-- 数据可用于输入兼容、数值方法及页面流程测试；不代表已校准的真实机组剩余寿命。模拟数据的形状不能证明预测算法准确。
+面向寿命分析软件开发、算法学习与功能演示的三组模拟数据。
 
-## 加载
+[数据文件](datasets/) · [字段字典](docs/DATA_DICTIONARY.md) · [数据说明](docs/DATA_CARD.md) · [质量检查](docs/QUALITY_REPORT.md)
+
+</div>
+
+![三组模拟数据预览](assets/dataset-overview.png)
+
+## 数据一览
+
+| 数据集 | 规模 | 时间 / 寿命轴 | 推荐用途 | 下载 |
+|---|---|---|---|---|
+| **叶片载荷** | 3,600 行 · 6 台模拟机组 | 0.1 秒采样；每台 600 点 | 雨流计数、载荷谱与疲劳计算流程测试 | [CSV](datasets/rul_blade_load_fatigue.csv) · [Parquet](datasets/rul_blade_load_fatigue.parquet) |
+| **健康指数退化** | 720 行 · 6 台模拟机组 | 第 0–119 天；每台 120 点 | HI 趋势拟合与阈值外推流程测试 | [CSV](datasets/rul_bearing_degradation.csv) · [Parquet](datasets/rul_bearing_degradation.parquet) |
+| **部件寿命记录** | 每份 120 行；CSV为单部件版，Parquet为四部件版 | 累计运行小时；各44失效 / 76右删失 | Weibull、生存曲线与删失数据处理测试 | [CSV 单部件](datasets/rul_component_failures.csv) · [Parquet 四部件](datasets/rul_component_failures.parquet) |
+
+**4,440 行为每种格式分别计数的合计。**载荷、退化两组的CSV与Parquet数值一致；寿命记录的两个文件是不同模拟版本，不能直接互换或合并。图中寿命预览采用四部件Parquet版。
+
+## 快速开始
+
+```bash
+git clone https://github.com/cheercao/wind-turbine-rul-datasets.git
+cd wind-turbine-rul-datasets
+python -m pip install -r requirements.txt
+python scripts/validate.py
+```
 
 ```python
 import pandas as pd
 
-fatigue = pd.read_csv("datasets/rul_blade_load_fatigue.csv", parse_dates=["timestamp"])
-degradation = pd.read_csv("datasets/rul_bearing_degradation.csv", parse_dates=["date"])
-survival = pd.read_csv("datasets/rul_component_failures.csv")
-# 或 pd.read_parquet("datasets/rul_component_failures.parquet")
+loads = pd.read_csv("datasets/rul_blade_load_fatigue.csv", parse_dates=["timestamp"])
+hi = pd.read_csv("datasets/rul_bearing_degradation.csv", parse_dates=["date"])
+life = pd.read_parquet("datasets/rul_component_failures.parquet")
+
+failed = life[life["failed_event"] == 1]       # 44 条失效记录
+censored = life[life["failed_event"] == 0]    # 76 条观察结束时未失效的记录
 ```
 
-manifest.json提供每个文件的行数、字段、字节数及SHA-256，可核对下载后的文件。
-本目录不包含软件源代码、数据库、账户信息或第三方下载的数据。
+## 如何对应三类算法
+
+**雨流疲劳**：使用 `blade_edge_1/2/3` 载荷时序。载荷不能未经标定直接当作 MPa 应力；材料/结构 S-N 参数需要匹配输入单位。数据仅覆盖短时模拟载荷，不提供真实服役历史或真实剩余年限标签。
+
+**HI 退化**：使用 `operating_days` 与 `health_index_hi`，按机组分别拟合。HI 阈值需由使用者给出；拟合曲线不一定在未来穿过阈值。导入原软件时将时间字段 `timestamp` 映射到文件中的 `date`。
+
+**Weibull 生存分析**：使用 `component_type`、`operating_hours`、`failed_event`。`1` 表示失效，`0` 表示右删失。未失效样本的运行时长不是故障时间，不能全部当作失效。不同部件应分别分析。**推荐四类部件对比时使用Parquet版；CSV版120行均为Gearbox_Bearing。两版使用了相同形式的记录ID，不能按ID拼接。**
+
+## 数据来源与适用范围
+
+这六个文件直接整理自本地软件项目中已有的模拟样例，**原始数值未修改，也未为匹配算法重新生成**。它们不是风场实测数据、公开故障日志或 NASA 数据。
+
+适合输入兼容、数值方法学习、图表展示和开发回归。数据不构成真实设备寿命基准，不包含足以验证现场 RUL 准确性的独立真实标签。具体生成公式、随机种子和物理标定信息未随原文件提供；本仓库不补写无法核实的来源信息。
+
+本仓库只提供数据和加载/校验工具，不包含原软件的寿命预测实现，也不为任何实现的统计正确性作保证。
+
+## 文件结构
+
+```text
+datasets/                 # 六个原始数据文件（CSV / Parquet）
+assets/dataset-overview.png
+docs/DATA_CARD.md         # 来源、用途与局限
+docs/DATA_DICTIONARY.md   # 字段、单位和编码
+docs/QUALITY_REPORT.md    # 数据完整性检查结果
+scripts/validate.py       # SHA-256、字段及双格式一致性校验
+manifest.json             # 原始文件大小、行数、字段、SHA-256
+requirements.txt
+CHANGELOG.md
+```
+
+下载全部内容可使用仓库的 **Code → Download ZIP**。许可状态见 [数据说明](docs/DATA_CARD.md#许可状态)。
