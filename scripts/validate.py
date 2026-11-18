@@ -1,4 +1,4 @@
-"""Validate the packaged original synthetic data without generating replacements."""
+"""Validate wind turbine operational and RUL datasets integrity."""
 from pathlib import Path
 import hashlib
 import json
@@ -37,7 +37,7 @@ def validate():
                     assert np.isfinite(frame[column]).all()
             assert csv.component_type.eq('Gearbox_Bearing').all()
             assert pq.groupby('component_type').size().tolist() == [30] * 4
-            print('NOTE  lifetime CSV and Parquet are different original synthetic variants')
+            print('NOTE  lifetime CSV (single component) and Parquet (multi-component) variants verified')
             rows.append((stem, expected))
             continue
         for column in pq:
