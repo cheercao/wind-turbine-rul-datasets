@@ -41,7 +41,11 @@
 ### Task 1: 载荷循环提取与累积疲劳损伤量化 (Rainflow Fatigue Analysis)
 
 - **物理背景**：风电机组叶片在旋转过程中承受显著的周期性气动载荷与随机湍流扰动，产生微观塑性变形与疲劳裂纹累积。
-- **输入时序规格**：多通道连续时序张量定义为 $\mathbf{X} \in \mathbb{R}^{T \times C}$，采样频率 10 Hz，时序长度 $T = 600$（单次连续观测时长 60 s），涵盖 6 台机组（WT01–WT06）。测点包含三通道叶片摆振实测载荷（`blade_edge_1/2/3`）与发电机转速（`generator_rpm`）。
+- **输入时序规格**：涵盖 6 台机组（WT01–WT06），采样频率 10 Hz，单次连续观测时长 60 s（时序长度 T = 600）。测点包含三通道叶片摆振实测载荷（`blade_edge_1/2/3`）与发电机转速（`generator_rpm`），多通道时序张量表征为：
+
+$$
+\mathbf{X} \in \mathbb{R}^{T \times C} \quad (T = 600, \, C = 4)
+$$
 
 #### 数学建模与计算流程
 
@@ -67,7 +71,7 @@ $$
 N_i \cdot S_{a,i}^m = C
 $$
 
-依 Palmgren-Miner 准则计算无量纲累积疲劳损伤度 $D$：
+依 Palmgren-Miner 准则计算无量纲累积疲劳损伤度：
 
 $$
 D = \sum_{i=1}^M \frac{n_i}{N_i}
@@ -86,9 +90,9 @@ $$
 \mathcal{D}_k = \{ (t_\tau, y_\tau, \mathbf{z}_\tau) \}_{\tau=0}^k
 $$
 
-包含 6 台机组（WT01–WT06）连续 120 天跟踪监测（运行天数 $t \in [0, 119]$）：
-- `bearing_temp_residual_degC`：测点温度与热平衡基准的残差标量 $\mathbf{z}$；
-- `health_index_hi`：多维融合健康状态指数 $y \in (0, 1.0]$。
+包含 6 台机组（WT01–WT06）连续 120 天跟踪监测（运行天数历时 0–119 天）：
+- `bearing_temp_residual_degC`：轴承测点温度与热平衡机理基准的温度残差值；
+- `health_index_hi`：多维融合健康状态指数（数值区间 0 到 1.0 之间）。
 
 #### 数学建模与计算流程
 
@@ -100,11 +104,11 @@ $$
 y(t) = g(t; \boldsymbol{\theta}) + \epsilon(t), \quad \epsilon(t) \sim \mathcal{N}(0, \sigma^2)
 $$
 
-典型模型包括指数衰减模型 $g(t) = a \cdot \exp(b \cdot t)$、多项式轨迹或高斯过程回归（Gaussian Process Regression, GPR）。
+典型模型包括指数衰减模型、多项式轨迹拟合或高斯过程回归（Gaussian Process Regression, GPR）。
 
 **2. 首达阈值时间（First Hitting Time, FHT）预测**
 
-设失效预警阈值为 $HI_{\text{th}}$，剩余寿命预测形式化为首达阈值时间求解：
+设失效预警阈值为阈值常量（例如 0.2 或 0.1），剩余寿命预测形式化为首达阈值时间（FHT）求解：
 
 $$
 T_{\text{fail}} = \inf \left[ t > t_k \mid g(t; \boldsymbol{\theta}) \le HI_{\text{th}} \right]
@@ -127,17 +131,17 @@ $$
 
 涵盖 4 类核心部件（`Main_Bearing`、`Gearbox_Bearing`、`Generator_Bearing`、`Pitch_Motor`）。各分量定义如下：
 
-| 变量符号 | 对应数据字段 | 物理含义与取值范围 |
+| 变量符号 | 对应数据字段 | 物理含义与定义说明 |
 |---|---|---|
-| $t_j$ | `operating_hours` | 观测服役时长（累计运行小时数，$t_j > 0$） |
-| $\delta_j$ | `failed_event` | 事件状态指示符：$\delta = 1$ 为确切故障停机，$\delta = 0$ 为右删失截尾 |
+| $t_j$ | `operating_hours` | 观测服役时长（累计运行小时数，数值均大于 0） |
+| $\delta_j$ | `failed_event` | 事件状态指示符：1 为确切故障停机，0 为右删失截尾 |
 | $\mathbf{x}_j$ | `avg_load_factor`, `avg_ambient_temp` | 工况协变量向量（包含平均负载系数与平均环境温度） |
 
 #### 数学建模与计算流程
 
 **1. 参数化 Weibull 似然估计（处理右删失数据）**
 
-两参数 Weibull 分布可靠度函数 $R(t)$ 与概率密度函数 $f(t)$ 分别为：
+两参数 Weibull 分布可靠度函数与概率密度函数分别为：
 
 $$
 R(t; \beta, \eta) = \exp\left( -\left(\frac{t}{\eta}\right)^\beta \right)
@@ -163,8 +167,8 @@ $$
 
 | 统计分量 | 物理含义说明 |
 |---|---|
-| $d_j$ | 在时刻 $t_j$ 发生的确切故障失效事件数 |
-| $n_j$ | 在时刻 $t_j$ 处仍处于风险暴露（At-Risk）的有效在役样本总数 |
+| $d_j$ | 对应时间节点发生的确切故障失效事件数 |
+| $n_j$ | 对应时间节点处仍处于风险暴露（At-Risk）的有效在役样本总数 |
 
 ---
 
@@ -178,13 +182,13 @@ $$
 
 ### Task 3 关键部件统计分布 (Component Breakdown)
 
-| 部件编码 (`component_type`) | 中文名称 | 样本量 ($N$) | 失效事件 ($\delta=1$) | 右删失事件 ($\delta=0$) | 删失率 ($c\%$) | 服役小时极差 (Min–Max h) |
+| 部件编码 (`component_type`) | 中文名称 | 样本量 (N) | 失效事件数 (Failed) | 右删失事件数 (Censored) | 删失比例 (%) | 服役小时极差 (Min–Max h) |
 |---|---|---:|---:|---:|---:|---|
 | `Main_Bearing` | 主轴承 | 30 | 11 | 19 | 63.3% | 7,120.4 – 51,704.3 |
 | `Gearbox_Bearing` | 齿轮箱轴承 | 30 | 11 | 19 | 63.3% | 5,826.1 – 48,932.0 |
 | `Generator_Bearing` | 发电机轴承 | 30 | 11 | 19 | 63.3% | 6,340.8 – 47,819.5 |
 | `Pitch_Motor` | 变桨电机 | 30 | 11 | 19 | 63.3% | 6,012.7 – 46,250.0 |
-| **总计 / 整体宏观统计** | **4 类核心部件** | **120** | **44** | **76** | **63.3%** | **5,826.1 – 51,704.3** |
+| **总计 / 整体统计** | **4 类核心部件** | **120** | **44** | **76** | **63.3%** | **5,826.1 – 51,704.3** |
 
 ---
 
@@ -239,11 +243,11 @@ print(f"[Task 3] 样本总数: {len(survival_df)}, 失效事件: {n_failed}, 右
 为确保不同研究工作在该基准上具有严格可比性，推荐遵循以下基准测试协议：
 
 1. **Task 1: 雨流疲劳损伤累积**
-   - **推荐基线**：ASTM E1049-85 雨流计数法 + Goodman 应力修正 + 典型风机叶片复合材料 S-N 曲线 ($m=10, C=10^{35}$)。
-   - **评价指标**：等效循环数 $N_{\text{eq}}$、累积损伤度 $D$、损伤相对误差 (Relative Damage Error)。
+   - **推荐基线**：ASTM E1049-85 雨流计数法 + Goodman 应力修正 + 典型风机叶片复合材料双对数 S-N 曲线（材料常数取 m=10, C=1e35）。
+   - **评价指标**：等效循环周次、累积疲劳损伤度、损伤相对误差 (Relative Damage Error)。
 2. **Task 2: 退化轨迹与 RUL 预测**
    - **推荐基线**：指数外推模型 (Exponential FHT)、高斯过程回归 (GPR)、双向长短期记忆网络 (BiLSTM)、时间卷积网络 (TCN)。
-   - **评价指标**：均方根误差 (RMSE)、平均绝对误差 (MAE)、对称平均绝对百分比误差 (SMAPE)、预测决定系数 ($R^2$)。
+   - **评价指标**：均方根误差 (RMSE)、平均绝对误差 (MAE)、对称平均绝对百分比误差 (SMAPE)、拟合优度系数 (R² Score)。
 3. **Task 3: 考虑右删失的可靠度与生存分析**
    - **推荐基线**：双参数极大似然 Weibull 回归、Kaplan-Meier 乘积限估计、Cox 比例风险模型 (Cox-PH)、深度生存网络 (DeepSurv)。
    - **评价指标**：一致性指数 (Concordance Index, C-index)、积分 Brier 分数 (Integrated Brier Score, IBS)、负对数似然损失 (Negative Log-Likelihood, NLL)。

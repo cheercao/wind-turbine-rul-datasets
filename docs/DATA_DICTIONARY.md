@@ -5,7 +5,7 @@
 | 字段标识符 | 数据类型 | 物理含义 | 量纲 / 单位 | 取值范围 |
 |---|---|---|---|---|
 | `turbine_id` | String | 风电机组编号 | - | WT01–WT06 |
-| `timestamp` | Timestamp | 高频等间隔时间戳 | ISO 8601 (10 Hz) | 步长 $\Delta t = 0.1\text{ s}$ |
+| `timestamp` | Timestamp | 高频等间隔时间戳 | ISO 8601 (10 Hz) | 采样时间间隔 0.1 s |
 | `blade_edge_1`| Float64 | 1 号叶片摆振方向实测载荷 | 弯矩/应力标定量纲 | 连续实数 |
 | `blade_edge_2`| Float64 | 2 号叶片摆振方向实测载荷 | 弯矩/应力标定量纲 | 连续实数 |
 | `blade_edge_3`| Float64 | 3 号叶片摆振方向实测载荷 | 弯矩/应力标定量纲 | 连续实数 |
@@ -21,7 +21,7 @@
 | `date` | Date | 日级监测时间序列 | YYYY-MM-DD | 120 天连续观测周期 |
 | `operating_days`| Int64 | 运行天数历时序列 | Days (天) | 0–119 |
 | `bearing_temp_residual_degC` | Float64 | 测点与热平衡机理基准的温度残差 | ℃ (摄氏度) | 实数（可正可负） |
-| `health_index_hi` | Float64 | 多源状态融合健康指数 (Health Index) | 无量纲标量 | $0 < HI \le 1.0$ |
+| `health_index_hi` | Float64 | 多源状态融合健康指数 (Health Index) | 无量纲标量 | 0.0 到 1.0 之间 |
 
 ---
 
@@ -38,7 +38,7 @@
 
 ### 核心部件统计分布规范 (Parquet 四部件版)
 
-| 部件编码 (`component_type`) | 中文定义 | 样本量 ($N$) | 失效样本数 ($\delta=1$) | 删失样本数 ($\delta=0$) | 删失率 ($c\%$) |
+| 部件编码 (`component_type`) | 中文定义 | 样本量 (N) | 失效样本数 (Failed) | 删失样本数 (Censored) | 删失比例 (%) |
 |---|---|---:|---:|---:|---:|
 | `Main_Bearing` | 主轴承 | 30 | 11 | 19 | 63.3% |
 | `Gearbox_Bearing` | 齿轮箱轴承 | 30 | 11 | 19 | 63.3% |
